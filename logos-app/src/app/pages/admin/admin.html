@@ -1,0 +1,14 @@
+<div style="padding: 40px; font-family: sans-serif;">
+    <h1>Admin CMS Dashboard</h1>
+    <p>Secure Management Space</p>
+    
+    <div *ngIf="user()" style="margin-bottom: 20px; padding: 15px; background-color: #f1f3f5; border-radius: 6px;">
+      <p>Authenticated User ID: <strong>{{ user()?.id }}</strong></p>
+      <p>Email Context: <strong>{{ user()?.email }}</strong></p>
+    </div>
+  
+    <button (click)="handleLogout()" style="padding: 10px 20px; font-size: 14px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+      Log Out Securely
+    </button>
+  </div>
+  
