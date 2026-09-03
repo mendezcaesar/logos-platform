@@ -29,7 +29,10 @@
         "ssr": {
           "entry": "logos-app/src/server.ts"
         },
-        "outputMode": "server"
+        "prerender": {
+  "discoverRoutes": false
+}
+
       },
       "configurations": {
         "production": {

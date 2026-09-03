@@ -1,11 +1,17 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideRouter } from '@angular/router';
-import { appRoutes } from './app.routes';
-import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
+import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { routes } from './app.routes';
+import { provideClientHydration } from '@angular/platform-browser';
+import { SupabaseService } from './services/supabase.service';
+import { AuthService } from './services/auth.service';
 
 export const appConfig: ApplicationConfig = {
-  providers: [provideClientHydration(withEventReplay()),
-    provideBrowserGlobalErrorListeners(),
-    provideRouter(appRoutes)
+  providers: [
+    provideZoneChangeDetection({ eventCoalescing: true }),
+    provideRouter(routes, withComponentInputBinding()),
+    provideClientHydration(),
+    // Enforce global singleton availability across both SSR server execution loops and client viewspaces
+    SupabaseService,
+    AuthService
   ]
 };

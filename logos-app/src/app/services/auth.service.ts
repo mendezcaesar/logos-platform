@@ -1,4 +1,5 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { User } from '@supabase/supabase-js';
 import { SupabaseService } from './supabase.service';
@@ -7,37 +8,34 @@ import { SupabaseService } from './supabase.service';
   providedIn: 'root'
 })
 export class AuthService {
-  // Silicon Valley Pattern: Inject services using the modern inject() token over constructors
   private supabaseService = inject(SupabaseService);
   private router = inject(Router);
-
-  // Core Reactivity: Use Angular Signals to store the logged-in user state across the app
-  private currentUserSignal = signal<User | null>(null);
   
-  // Publicly expose the signal as read-only to guarantee a unidirectional data flow
+  // Silicon Valley Pattern: Inject the PLATFORM_ID token to detect if code is running on server vs browser
+  private platformId = inject(PLATFORM_ID);
+
+  private currentUserSignal = signal<User | null>(null);
   readonly user = this.currentUserSignal.asReadonly();
 
   constructor() {
-    // Listen to changes in authentication state automatically (login, logout, token refresh)
-    this.supabaseService.client.auth.onAuthStateChange((event, session) => {
-      this.currentUserSignal.set(session?.user ?? null);
-      
-      // Clear data and redirect if the session expires or user logs out
-      if (event === 'SIGNED_OUT') {
-        this.router.navigate(['/login']);
-      }
-    });
+    // Crucial Guard: Only execute state listeners if we are running safely inside the user's browser
+    if (isPlatformBrowser(this.platformId)) {
+      this.supabaseService.client.auth.onAuthStateChange((event, session) => {
+        this.currentUserSignal.set(session?.user ?? null);
+        
+        if (event === 'SIGNED_OUT') {
+          this.router.navigate(['/login']);
+        }
+      });
+    }
   }
 
-  /**
-   * Triggers the OAuth 2.0 PKCE authentication handshake with GitHub.
-   * Redirects the user's browser securely to GitHub's authorization gate.
-   */
   async loginWithGitHub(): Promise<void> {
+    if (!isPlatformBrowser(this.platformId)) return;
+
     const { error } = await this.supabaseService.client.auth.signInWithOAuth({
       provider: 'github',
       options: {
-        // Redirection target after successful cloud authorization handshakes
         redirectTo: `${window.location.origin}/admin`
       }
     });
@@ -48,10 +46,9 @@ export class AuthService {
     }
   }
 
-  /**
-   * Clears session cookies and signs the current user out of all cloud scopes.
-   */
   async logout(): Promise<void> {
+    if (!isPlatformBrowser(this.platformId)) return;
+
     const { error } = await this.supabaseService.client.auth.signOut();
     if (error) {
       console.error('Sign Out Error:', error.message);
