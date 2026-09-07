@@ -1,14 +1,79 @@
-<div style="padding: 40px; font-family: sans-serif;">
-    <h1>Admin CMS Dashboard</h1>
-    <p>Secure Management Space</p>
-    
-    <div *ngIf="user()" style="margin-bottom: 20px; padding: 15px; background-color: #f1f3f5; border-radius: 6px;">
-      <p>Authenticated User ID: <strong>{{ user()?.id }}</strong></p>
-      <p>Email Context: <strong>{{ user()?.email }}</strong></p>
-    </div>
+<div style="padding: 40px; font-family: sans-serif; max-width: 800px; margin: 0 auto;">
   
-    <button (click)="handleLogout()" style="padding: 10px 20px; font-size: 14px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
-      Log Out Securely
+  <!-- Header Control Area -->
+  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 20px; margin-bottom: 30px;">
+    <div>
+      <h1 style="margin: 0; color: #212529;">Admin CMS Dashboard</h1>
+      <p style="margin: 5px 0 0 0; color: #6c757d;">Secure Management & Content Creation Engine</p>
+    </div>
+    <button (click)="handleLogout()" style="padding: 10px 20px; font-size: 14px; background-color: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background 0.2s;">
+      Log Out
     </button>
   </div>
-  
+
+  <!-- Authenticated User Profile Summary Card -->
+  <div *ngIf="user()" style="margin-bottom: 30px; padding: 15px 20px; background-color: #f8f9fa; border-left: 4px solid #4cf299; border-radius: 4px; display: flex; gap: 20px;">
+    <p style="margin: 0; font-size: 14px; color: #495057;">Operator ID: <strong style="color: #212529;">{{ user()?.id }}</strong></p>
+    <p style="margin: 0; font-size: 14px; color: #495057;">Scope Account: <strong style="color: #212529;">{{ user()?.email }}</strong></p>
+  </div>
+
+  <!-- Enterprise Rich Article Creation Form Container -->
+  <div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+    <h2 style="margin-top: 0; margin-bottom: 20px; color: #343a40; font-size: 20px;">Write a New Article</h2>
+    
+    <form (submit)="handleCreatePost($event)" style="display: flex; flex-direction: column; gap: 20px;">
+      
+      <!-- Input 1: Title Column -->
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <label style="font-weight: bold; font-size: 14px; color: #495057;">Article Title <span style="color: #dc3545;">*</span></label>
+        <input 
+          type="text" 
+          [ngModel]="title()" 
+          (ngModelChange)="title.set($event)"
+          name="title" 
+          placeholder="e.g., Mastering Angular Signals in Production Architecture"
+          style="padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 16px; outline: none;"
+          required
+        />
+      </div>
+
+      <!-- Input 2: Excerpt / Metadata Context Subcolumn -->
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <label style="font-weight: bold; font-size: 14px; color: #495057;">SEO Excerpt Summary</label>
+        <input 
+          type="text" 
+          [ngModel]="excerpt()" 
+          (ngModelChange)="excerpt.set($event)"
+          name="excerpt" 
+          placeholder="A short description summarizing this piece for Google Search Results snippets..."
+          style="padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; outline: none;"
+        />
+      </div>
+
+      <!-- Input 3: Primary Core Content Markdown TextArea Body -->
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <label style="font-weight: bold; font-size: 14px; color: #495057;">Article Content (Markdown Supported) <span style="color: #dc3545;">*</span></label>
+        <textarea 
+          [ngModel]="content()" 
+          (ngModelChange)="content.set($event)"
+          name="content" 
+          placeholder="Write or paste your comprehensive engineering analysis body markup right here..."
+          rows="10"
+          style="padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 15px; font-family: inherit; line-height: 1.5; resize: vertical; outline: none;"
+          required
+        ></textarea>
+      </div>
+
+      <!-- Execution Submit Control Button Action Trigger -->
+      <button 
+        type="submit" 
+        [disabled]="isSaving()"
+        style="padding: 14px 28px; font-size: 16px; background-color: #0d6efd; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; text-align: center; transition: background 0.2s;"
+      >
+        {{ isSaving() ? 'Saving to Database Engine...' : 'Publish Article to Cloud' }}
+      </button>
+
+    </form>
+  </div>
+
+</div>
