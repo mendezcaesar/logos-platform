@@ -6,7 +6,7 @@
       <h1 style="margin: 0; color: #212529;">Admin CMS Dashboard</h1>
       <p style="margin: 5px 0 0 0; color: #6c757d;">Secure Management & Content Creation Engine</p>
     </div>
-    <button (click)="handleLogout()" style="padding: 10px 20px; font-size: 14px; background-color: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background 0.2s;">
+    <button (click)="handleLogout()" style="padding: 10px 20px; font-size: 14px; background-color: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
       Log Out
     </button>
   </div>
@@ -21,20 +21,23 @@
   <div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
     <h2 style="margin-top: 0; margin-bottom: 20px; color: #343a40; font-size: 20px;">Write a New Article</h2>
     
-    <form (submit)="handleCreatePost($event)" style="display: flex; flex-direction: column; gap: 20px;">
+    <!-- We bind the native form element to our TypeScript [formGroup]="cmsForm" state machine -->
+    <form [formGroup]="cmsForm" (submit)="handleCreatePost()" style="display: flex; flex-direction: column; gap: 20px;">
       
       <!-- Input 1: Title Column -->
       <div style="display: flex; flex-direction: column; gap: 8px;">
         <label style="font-weight: bold; font-size: 14px; color: #495057;">Article Title <span style="color: #dc3545;">*</span></label>
         <input 
           type="text" 
-          [ngModel]="title()" 
-          (ngModelChange)="title.set($event)"
-          name="title" 
+          formControlName="title" 
           placeholder="e.g., Mastering Angular Signals in Production Architecture"
-          style="padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 16px; outline: none;"
-          required
+          [style.border-color]="cmsForm.get('title')?.invalid && cmsForm.get('title')?.touched ? '#dc3545' : '#ced4da'"
+          style="padding: 12px; border: 1px solid; border-radius: 6px; font-size: 16px; outline: none; transition: border-color 0.2s;"
         />
+        <!-- Explicit User Warning Message -->
+        <span *ngIf="cmsForm.get('title')?.invalid && cmsForm.get('title')?.touched" style="color: #dc3545; font-size: 12px; font-weight: bold;">
+          ⚠️ This box cannot be blank. You must provide a valid text article title!
+        </span>
       </div>
 
       <!-- Input 2: Excerpt / Metadata Context Subcolumn -->
@@ -42,9 +45,7 @@
         <label style="font-weight: bold; font-size: 14px; color: #495057;">SEO Excerpt Summary</label>
         <input 
           type="text" 
-          [ngModel]="excerpt()" 
-          (ngModelChange)="excerpt.set($event)"
-          name="excerpt" 
+          formControlName="excerpt" 
           placeholder="A short description summarizing this piece for Google Search Results snippets..."
           style="padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; outline: none;"
         />
@@ -54,21 +55,25 @@
       <div style="display: flex; flex-direction: column; gap: 8px;">
         <label style="font-weight: bold; font-size: 14px; color: #495057;">Article Content (Markdown Supported) <span style="color: #dc3545;">*</span></label>
         <textarea 
-          [ngModel]="content()" 
-          (ngModelChange)="content.set($event)"
-          name="content" 
+          formControlName="content" 
           placeholder="Write or paste your comprehensive engineering analysis body markup right here..."
           rows="10"
-          style="padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 15px; font-family: inherit; line-height: 1.5; resize: vertical; outline: none;"
-          required
+          [style.border-color]="cmsForm.get('content')?.invalid && cmsForm.get('content')?.touched ? '#dc3545' : '#ced4da'"
+          style="padding: 12px; border: 1px solid; border-radius: 6px; font-size: 15px; font-family: inherit; line-height: 1.5; resize: vertical; outline: none; transition: border-color 0.2s;"
         ></textarea>
+        <!-- Explicit User Warning Message -->
+        <span *ngIf="cmsForm.get('content')?.invalid && cmsForm.get('content')?.touched" style="color: #dc3545; font-size: 12px; font-weight: bold;">
+          ⚠️ This box cannot be blank. You must type in article body content data!
+        </span>
       </div>
 
-      <!-- Execution Submit Control Button Action Trigger -->
+      <!-- Execution Submit Control Button: HARD DISABLED if formState is invalid or whitespace errors trigger -->
       <button 
         type="submit" 
-        [disabled]="isSaving()"
-        style="padding: 14px 28px; font-size: 16px; background-color: #0d6efd; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; text-align: center; transition: background 0.2s;"
+        [disabled]="cmsForm.invalid || isSaving()"
+        [style.background-color]="cmsForm.invalid ? '#6c757d' : '#0d6efd'"
+        [style.cursor]="cmsForm.invalid ? 'not-allowed' : 'pointer'"
+        style="padding: 14px 28px; font-size: 16px; color: white; border: none; border-radius: 6px; font-weight: bold; text-align: center; transition: all 0.2s;"
       >
         {{ isSaving() ? 'Saving to Database Engine...' : 'Publish Article to Cloud' }}
       </button>

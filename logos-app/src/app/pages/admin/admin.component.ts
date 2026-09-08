@@ -1,13 +1,14 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormGroup, FormControl, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { SupabaseService } from '../../services/supabase.service';
 
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  // Silicon Valley Rule: We load ReactiveFormsModule to activate programmatic state machine form controllers
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './admin.html',
   styleUrl: './admin.css'
 })
@@ -18,15 +19,30 @@ export class AdminComponent {
   user = this.authService.user;
   isSaving = signal<boolean>(false);
 
-  // Form Field Signal States
-  title = signal<string>('');
-  content = signal<string>('');
-  excerpt = signal<string>('');
+  // Programmatic State Container Form Machine
+  public cmsForm: FormGroup;
+
+  constructor() {
+    // We instantiate the form controls with explicit custom whitespace protection guards
+    this.cmsForm = new FormGroup({
+      title: new FormControl('', [Validators.required, this.strictWhitespaceValidator]),
+      excerpt: new FormControl(''),
+      content: new FormControl('', [Validators.required, this.strictWhitespaceValidator])
+    });
+  }
 
   /**
-   * Helper function to automatically convert title text into an SEO-friendly URL slug string.
-   * Example: "Hello World Blog!" becomes "hello-world-blog"
+   * 🏆 World's Best Practice: Custom Clean-Space Validation Engine.
+   * This intercepts spacebar spammers. If a box contains ONLY spaces, it strips them down, 
+   * detects the empty string, and marks the field completely INVALID at the code level.
    */
+  private strictWhitespaceValidator(control: AbstractControl): ValidationErrors | null {
+    const value = control.value;
+    const isWhitespace = (value || '').trim().length === 0;
+    const isValid = !isWhitespace;
+    return isValid ? null : { whitespaceViolation: true };
+  }
+
   private generateSlug(text: string): string {
     return text
       .toLowerCase()
@@ -37,35 +53,37 @@ export class AdminComponent {
   }
 
   /**
-   * Dispatches form field payload states directly to our cloud Supabase posts table container.
-   * Leverages high-security dynamic in-memory session validations before dispatching payloads.
+   * Submits clean text to our Supabase database container over a secure authenticated connection.
    */
-  async handleCreatePost(event: Event): Promise<void> {
-    event.preventDefault();
-    
-    if (!this.title() || !this.content()) {
-      alert('Title and Content are strictly required fields!');
+  async handleCreatePost(): Promise<void> {
+    // Hard Security Fallback: Stop execution instantly if the form validation rules are broken
+    if (this.cmsForm.invalid) {
+      this.cmsForm.markAllAsTouched();
       return;
     }
 
-    // Security Verification: Grab the live session tokens from our in-memory client wrapper
+    // Security Verification: Safely verify dynamic user keys from our secure in-memory cache
     const { data: { session }, error: sessionError } = await this.supabaseService.client.auth.getSession();
 
     if (sessionError || !session) {
-      alert('Security violation: Your session token is missing or expired. Please re-authenticate!');
+      alert('Security violation: Your session token is missing or expired. Please log out and log back in.');
       return;
     }
 
     this.isSaving.set(true);
 
+    // Extract clean values with absolute spacing stripped away natively
+    const rawTitle = this.cmsForm.get('title')?.value;
+    const rawContent = this.cmsForm.get('content')?.value;
+    const rawExcerpt = this.cmsForm.get('excerpt')?.value;
+
     const payload = {
-      title: this.title(),
-      slug: this.generateSlug(this.title()),
-      content: this.content(),
-      excerpt: this.excerpt() || null
+      title: rawTitle.trim(),
+      slug: this.generateSlug(rawTitle),
+      content: rawContent.trim(),
+      excerpt: rawExcerpt?.trim() || null
     };
 
-    // Execute the insertion script with your active session context attached natively
     const { error } = await this.supabaseService.client
       .from('posts')
       .insert([payload]);
@@ -73,19 +91,14 @@ export class AdminComponent {
     this.isSaving.set(false);
 
     if (error) {
-      console.error('Database Rejected Request:', error.message);
+      console.error('Database Operation Crash Logs:', error.message);
       alert(`Database rejected article creation: ${error.message}`);
     } else {
-      alert('Article successfully written to the cloud database!');
-      this.title.set('');
-      this.content.set('');
-      this.excerpt.set('');
+      alert('Success! Your secure article was successfully written to the cloud Postgres database.');
+      this.cmsForm.reset({ title: '', excerpt: '', content: '' });
     }
   }
 
-  /**
-   * Terminates the session securely across cloud boundaries.
-   */
   async handleLogout(): Promise<void> {
     await this.authService.logout();
   }
