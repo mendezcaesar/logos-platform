@@ -9,17 +9,30 @@ import { environment } from '../../environments/environment';
 export class SupabaseService {
   private supabase!: SupabaseClient;
   private platformId = inject(PLATFORM_ID);
+  
+  // High-Security In-Memory Cache: Keeps the active session safe from XSS storage scrapers
+  private inMemoryTokenCache: string | null = null;
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
-      // 🌐 Running in the Browser: Initialize the full Supabase Client
       this.supabase = createClient(
         environment.supabaseUrl,
-        environment.supabaseKey
+        environment.supabaseKey,
+        {
+          auth: {
+            // Silicon Valley Pattern: Explicitly override the default insecure localStorage adapter
+            storage: {
+              getItem: (key: string) => this.inMemoryTokenCache,
+              setItem: (key: string, value: string) => { this.inMemoryTokenCache = value; },
+              removeItem: (key: string) => { this.inMemoryTokenCache = null; }
+            },
+            autoRefreshToken: true,
+            persistSession: true
+          }
+        }
       );
     } else {
-      // 🖥️ Running on the Server (SSR Build Time): Create a safe Mock Object
-      // This prevents the application from crashing due to missing browser window elements
+      // Server Mode Mock Layer to protect SSR compiler
       this.supabase = {
         auth: {
           onAuthStateChange: () => ({ data: { subscription: null } }),

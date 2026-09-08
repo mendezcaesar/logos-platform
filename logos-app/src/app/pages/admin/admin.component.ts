@@ -7,7 +7,7 @@ import { SupabaseService } from '../../services/supabase.service';
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule], // We import FormsModule to enable two-way binding [(ngModel)]
+  imports: [CommonModule, FormsModule],
   templateUrl: './admin.html',
   styleUrl: './admin.css'
 })
@@ -38,12 +38,21 @@ export class AdminComponent {
 
   /**
    * Dispatches form field payload states directly to our cloud Supabase posts table container.
+   * Leverages high-security dynamic in-memory session validations before dispatching payloads.
    */
   async handleCreatePost(event: Event): Promise<void> {
-    event.preventDefault(); // Stop page from reloading on form submit
+    event.preventDefault();
     
     if (!this.title() || !this.content()) {
       alert('Title and Content are strictly required fields!');
+      return;
+    }
+
+    // Security Verification: Grab the live session tokens from our in-memory client wrapper
+    const { data: { session }, error: sessionError } = await this.supabaseService.client.auth.getSession();
+
+    if (sessionError || !session) {
+      alert('Security violation: Your session token is missing or expired. Please re-authenticate!');
       return;
     }
 
@@ -56,6 +65,7 @@ export class AdminComponent {
       excerpt: this.excerpt() || null
     };
 
+    // Execute the insertion script with your active session context attached natively
     const { error } = await this.supabaseService.client
       .from('posts')
       .insert([payload]);
@@ -63,17 +73,19 @@ export class AdminComponent {
     this.isSaving.set(false);
 
     if (error) {
-      console.error('Cloud Save Operations Failure:', error.message);
+      console.error('Database Rejected Request:', error.message);
       alert(`Database rejected article creation: ${error.message}`);
     } else {
       alert('Article successfully written to the cloud database!');
-      // Clear form inputs on success
       this.title.set('');
       this.content.set('');
       this.excerpt.set('');
     }
   }
 
+  /**
+   * Terminates the session securely across cloud boundaries.
+   */
   async handleLogout(): Promise<void> {
     await this.authService.logout();
   }
