@@ -56,23 +56,21 @@ export class AdminComponent {
    * Submits clean text to our Supabase database container over a secure authenticated connection.
    */
   async handleCreatePost(): Promise<void> {
-    // Hard Security Fallback: Stop execution instantly if the form validation rules are broken
     if (this.cmsForm.invalid) {
       this.cmsForm.markAllAsTouched();
       return;
     }
 
-    // Security Verification: Safely verify dynamic user keys from our secure in-memory cache
-    const { data: { session }, error: sessionError } = await this.supabaseService.client.auth.getSession();
+    // High-Security Lock: Force the app to verify the token cache status live before pushing data
+    const isAuthenticated = await this.authService.ensureAuthenticatedSession();
 
-    if (sessionError || !session) {
-      alert('Security violation: Your session token is missing or expired. Please log out and log back in.');
+    if (!isAuthenticated) {
+      alert('Security violation: Your authentication token is not fully loaded. Please wait 2 seconds and try again!');
       return;
     }
 
     this.isSaving.set(true);
 
-    // Extract clean values with absolute spacing stripped away natively
     const rawTitle = this.cmsForm.get('title')?.value;
     const rawContent = this.cmsForm.get('content')?.value;
     const rawExcerpt = this.cmsForm.get('excerpt')?.value;
@@ -94,10 +92,11 @@ export class AdminComponent {
       console.error('Database Operation Crash Logs:', error.message);
       alert(`Database rejected article creation: ${error.message}`);
     } else {
-      alert('Success! Your secure article was successfully written to the cloud Postgres database.');
+      alert('Success! Your article was successfully written to the cloud Postgres database.');
       this.cmsForm.reset({ title: '', excerpt: '', content: '' });
     }
   }
+
 
   async handleLogout(): Promise<void> {
     await this.authService.logout();

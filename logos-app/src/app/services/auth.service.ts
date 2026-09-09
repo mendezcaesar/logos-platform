@@ -10,17 +10,16 @@ import { SupabaseService } from './supabase.service';
 export class AuthService {
   private supabaseService = inject(SupabaseService);
   private router = inject(Router);
-  
-  // Silicon Valley Pattern: Inject the PLATFORM_ID token to detect if code is running on server vs browser
   private platformId = inject(PLATFORM_ID);
 
   private currentUserSignal = signal<User | null>(null);
   readonly user = this.currentUserSignal.asReadonly();
 
   constructor() {
-    // Crucial Guard: Only execute state listeners if we are running safely inside the user's browser
     if (isPlatformBrowser(this.platformId)) {
+      // Step 1: Instantly start listening for incoming OAuth credential redirections
       this.supabaseService.client.auth.onAuthStateChange((event, session) => {
+        // Sync the reactive application states with the fresh session variables smoothly
         this.currentUserSignal.set(session?.user ?? null);
         
         if (event === 'SIGNED_OUT') {
@@ -28,6 +27,21 @@ export class AuthService {
         }
       });
     }
+  }
+
+  /**
+   * Technical Fix: Forces the code to wait until Supabase verifies the in-memory 
+   * session before letting components fire data mutation requests.
+   */
+  async ensureAuthenticatedSession(): Promise<boolean> {
+    if (!isPlatformBrowser(this.platformId)) return false;
+    
+    const { data: { session } } = await this.supabaseService.client.auth.getSession();
+    if (session) {
+      this.currentUserSignal.set(session.user);
+      return true;
+    }
+    return false;
   }
 
   async loginWithGitHub(): Promise<void> {
@@ -48,10 +62,7 @@ export class AuthService {
 
   async logout(): Promise<void> {
     if (!isPlatformBrowser(this.platformId)) return;
-
     const { error } = await this.supabaseService.client.auth.signOut();
-    if (error) {
-      console.error('Sign Out Error:', error.message);
-    }
+    if (error) console.error('Sign Out Error:', error.message);
   }
 }
