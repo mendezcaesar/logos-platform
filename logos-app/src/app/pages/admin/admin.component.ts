@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormGroup, FormControl, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
@@ -7,23 +7,19 @@ import { SupabaseService } from '../../services/supabase.service';
 @Component({
   selector: 'app-admin',
   standalone: true,
-  // Silicon Valley Rule: We load ReactiveFormsModule to activate programmatic state machine form controllers
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './admin.html',
   styleUrl: './admin.css'
 })
-export class AdminComponent {
+export class AdminComponent implements OnInit {
   private authService = inject(AuthService);
   private supabaseService = inject(SupabaseService);
   
   user = this.authService.user;
   isSaving = signal<boolean>(false);
-
-  // Programmatic State Container Form Machine
   public cmsForm: FormGroup;
 
   constructor() {
-    // We instantiate the form controls with explicit custom whitespace protection guards
     this.cmsForm = new FormGroup({
       title: new FormControl('', [Validators.required, this.strictWhitespaceValidator]),
       excerpt: new FormControl(''),
@@ -32,10 +28,17 @@ export class AdminComponent {
   }
 
   /**
-   * 🏆 World's Best Practice: Custom Clean-Space Validation Engine.
-   * This intercepts spacebar spammers. If a box contains ONLY spaces, it strips them down, 
-   * detects the empty string, and marks the field completely INVALID at the code level.
+   * 🏆 Lifecycle Sync: Automatically load and lock the security token 
+   * the exact millisecond this page opens up on the screen!
    */
+  async ngOnInit(): Promise<void> {
+    try {
+      await this.authService.ensureAuthenticatedSession();
+    } catch (err) {
+      console.error('Initial session hydration failed:', err);
+    }
+  }
+
   private strictWhitespaceValidator(control: AbstractControl): ValidationErrors | null {
     const value = control.value;
     const isWhitespace = (value || '').trim().length === 0;
@@ -52,24 +55,22 @@ export class AdminComponent {
       .replace(/^-+|-+$/g, '');
   }
 
-  /**
-   * Submits clean text to our Supabase database container over a secure authenticated connection.
-   */
   async handleCreatePost(): Promise<void> {
     if (this.cmsForm.invalid) {
       this.cmsForm.markAllAsTouched();
       return;
     }
 
-    // High-Security Lock: Force the app to verify the token cache status live before pushing data
+    this.isSaving.set(true);
+
+    // Double check token availability cleanly
     const isAuthenticated = await this.authService.ensureAuthenticatedSession();
 
     if (!isAuthenticated) {
-      alert('Security violation: Your authentication token is not fully loaded. Please wait 2 seconds and try again!');
+      this.isSaving.set(false);
+      alert('Security violation: Your session token could not be verified. Please log out and back in.');
       return;
     }
-
-    this.isSaving.set(true);
 
     const rawTitle = this.cmsForm.get('title')?.value;
     const rawContent = this.cmsForm.get('content')?.value;
@@ -96,7 +97,6 @@ export class AdminComponent {
       this.cmsForm.reset({ title: '', excerpt: '', content: '' });
     }
   }
-
 
   async handleLogout(): Promise<void> {
     await this.authService.logout();
