@@ -1,5 +1,5 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, signal, OnInit, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { SupabaseService } from '../../services/supabase.service';
 
@@ -12,36 +12,42 @@ import { SupabaseService } from '../../services/supabase.service';
 })
 export class BlogComponent implements OnInit {
   private supabaseService = inject(SupabaseService);
+  private platformId = inject(PLATFORM_ID);
 
-  // Core Reactivity: Signals to hold our live database records matrix array
   posts = signal<any[]>([]);
   isLoading = signal<boolean>(true);
+  isBrowser = signal<boolean>(false);
+  
+  // Diagnostic Tracker
+  errorMessage = signal<string>('');
 
-  /**
-   * Automatically executes the query the millisecond the component initializes on screen [13ffeeb].
-   */
   async ngOnInit(): Promise<void> {
-    await this.fetchPublicArticles();
+    if (isPlatformBrowser(this.platformId)) {
+      this.isBrowser.set(true);
+      await this.fetchPublicArticles();
+    }
   }
 
-  /**
-   * Executes an anonymous public read request against the cloud posts container table.
-   */
   private async fetchPublicArticles(): Promise<void> {
     this.isLoading.set(true);
+    this.errorMessage.set('');
+    
+    try {
+      const { data, error } = await this.supabaseService.client
+        .from('posts')
+        .select('id, title, excerpt, slug, created_at')
+        .order('created_at', { ascending: false });
 
-    // Fetch the ID, title, excerpt, slug, and creation date columns from the cloud database
-    const { data, error } = await this.supabaseService.client
-      .from('posts')
-      .select('id, title, excerpt, slug, created_at')
-      .order('created_at', { ascending: false }); // Sort so newest articles display first
-
-    this.isLoading.set(false);
-
-    if (error) {
-      console.error('Failed to pull public feed streams:', error.message);
-    } else if (data) {
-      this.posts.set(data);
+      if (error) {
+        this.errorMessage.set(error.message);
+        console.error('Database Error logs:', error.message);
+      } else if (data) {
+        this.posts.set(data);
+      }
+    } catch (err: any) {
+      this.errorMessage.set(err.message || 'Unknown runtime fetch rejection.');
+    } finally {
+      this.isLoading.set(false);
     }
   }
 }

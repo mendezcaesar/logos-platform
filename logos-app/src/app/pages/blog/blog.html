@@ -1,33 +1,40 @@
 <div style="padding: 40px; font-family: sans-serif; max-width: 800px; margin: 0 auto;">
   
-    <!-- Navigation Header Brand Area -->
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 20px; margin-bottom: 40px;">
-      <div>
-        <h1 style="margin: 0; color: #1a1d20; font-size: 28px;">Logos Publication</h1>
-        <p style="margin: 5px 0 0 0; color: #6c757d;">Public Engineering Log & Insights Feed</p>
-      </div>
-      <!-- Simple corridor back to the admin gateway dashboard -->
-      <a routerLink="/login" style="text-decoration: none; padding: 10px 18px; font-size: 14px; background-color: #f8f9fa; color: #212529; border: 1px solid #dee2e6; border-radius: 6px; font-weight: bold; transition: all 0.2s;">
-        Dashboard Portal →
-      </a>
+  <!-- Navigation Header Brand Area -->
+  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 20px; margin-bottom: 40px;">
+    <div>
+      <h1 style="margin: 0; color: #1a1d20; font-size: 28px;">Logos Publication</h1>
+      <p style="margin: 5px 0 0 0; color: #6c757d;">Public Engineering Log & Insights Feed</p>
     </div>
-  
+    <a routerLink="/login" style="text-decoration: none; padding: 10px 18px; font-size: 14px; background-color: #f8f9fa; color: #212529; border: 1px solid #dee2e6; border-radius: 6px; font-weight: bold;">
+      Dashboard Portal →
+    </a>
+  </div>
+
+  <!-- Client-Side Guard Execution Container -->
+  <div *ngIf="isBrowser()">
+
     <!-- Loading State Fallback Spinner -->
     <div *ngIf="isLoading()" style="text-align: center; padding: 60px 0; color: #6c757d;">
       <h3>Downloading publication rows from cloud engine...</h3>
     </div>
-  
+
+    <!-- 🚨 DIAGNOSTIC ERROR DISPLAY BLOCKS -->
+    <div *ngIf="errorMessage()" style="padding: 20px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 6px; color: #721c24; margin-bottom: 30px; font-weight: bold;">
+      <h4>Cloud Database Read Alert:</h4>
+      <p>{{ errorMessage() }}</p>
+    </div>
+
     <!-- Empty State Fallback -->
-    <div *ngIf="!isLoading() && posts().length === 0" style="text-align: center; padding: 60px 0; border: 2px dashed #dee2e6; border-radius: 8px; background: #fafafa;">
+    <div *ngIf="!isLoading() && !errorMessage() && posts().length === 0" style="text-align: center; padding: 60px 0; border: 2px dashed #dee2e6; border-radius: 8px; background: #fafafa;">
       <h3 style="color: #495057; margin-bottom: 10px;">No articles published yet</h3>
       <p style="color: #6c757d; margin: 0;">Log into the admin portal dashboard container to write your first piece!</p>
     </div>
-  
+
     <!-- Dynamic Structural Feed Grid Columns -->
     <div *ngIf="!isLoading() && posts().length > 0" style="display: flex; flex-direction: column; gap: 30px;">
       
-      <!-- Angular structural loop blocks over our reactive signal data arrays -->
-      <div *ngFor="let post of posts()" style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.01); transition: transform 0.2s, box-shadow 0.2s;">
+      <div *ngFor="let post of posts()" style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.01);">
         <span style="font-size: 12px; color: #6c757d; font-weight: bold; text-transform: uppercase;">
           Published: {{ post.created_at | date:'longDate' }}
         </span>
@@ -39,13 +46,14 @@
         <p style="color: #495057; font-size: 15px; line-height: 1.6; margin-bottom: 20px;">
           {{ post.excerpt || 'No summary excerpt provided for this article structure selection.' }}
         </p>
-  
+
         <a [routerLink]="['/post', post.slug]" style="text-decoration: none; color: #0d6efd; font-weight: bold; font-size: 14px; display: inline-flex; align-items: center; gap: 5px;">
           Read Complete Article <span>→</span>
         </a>
       </div>
-  
+
     </div>
-  
+
   </div>
-  
+
+</div>

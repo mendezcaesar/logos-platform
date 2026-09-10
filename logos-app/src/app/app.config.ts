@@ -7,7 +7,6 @@ import { AuthService } from './services/auth.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    // Official Stable Suffix: Activates modern native framework zoneless tracking engine performance
     provideZonelessChangeDetection(),
     provideRouter(routes, withComponentInputBinding()),
     provideClientHydration(),
